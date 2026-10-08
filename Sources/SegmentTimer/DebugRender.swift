@@ -44,8 +44,10 @@ enum DebugRender {
             rec(.pomodoro, 3, 8, 15, 25, 1), rec(.pomodoro, 3, 19, 40, 25, 1),
         ])
 
-        func render<V: View>(_ view: V, _ name: String, store: TimerStore, scale: CGFloat = 2, bg: Color = Color(white: 0.55)) {
+        func render<V: View>(_ view: V, _ name: String, store: TimerStore, scale: CGFloat = 2, bg: Color = Color(white: 0.55),
+                             editing: UUID? = nil) {
             let panels = PanelController(store: store, settings: settings, alarm: AlarmPlayer(settings: settings))
+            panels.editingLabelID = editing
             let renderer = ImageRenderer(content: view.fixedSize()
                 .environmentObject(store).environmentObject(settings).environmentObject(log).environmentObject(panels)
                 .padding(30).background(bg))
@@ -71,6 +73,7 @@ enum DebugRender {
         let pomoStore = TimerStore(preview: [tomato, t("Tee", 0, 240)], now: now, settings: settings, log: log)
         render(BarView(), "bar-pomo", store: pomoStore)
         render(DetailView(timerID: tomato.id, window: { nil }), "detail-pomo", store: pomoStore)
+        render(DetailView(timerID: tomato.id, window: { nil }), "detail-pomo-edit", store: pomoStore, editing: tomato.id)
 
         let pause = pomo(.shortBreak, index: 2, remaining: 200)
         render(BarView(), "bar-pause", store: TimerStore(preview: [pause], now: now, settings: settings, log: log))

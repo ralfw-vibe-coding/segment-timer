@@ -6,6 +6,7 @@ struct DetailView: View {
     let window: () -> NSWindow?
     @EnvironmentObject var store: TimerStore
     @EnvironmentObject var panels: PanelController
+    @State private var labelDraft = ""
 
     var body: some View {
         if let t = store.timer(timerID) {
@@ -26,10 +27,33 @@ struct DetailView: View {
                     PomoDots(index: t.pomoIndex, total: store.settings.longBreakEvery, kind: t.kind,
                              color: TimerPalette.tomato, size: 6)
                 }
-                Text(pomo ? headline(t) : (t.label.isEmpty ? "Timer" : t.label))
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundColor(t.color.opacity(0.9))
-                    .lineLimit(1)
+                if panels.editingLabelID == timerID {
+                    if pomo {
+                        Text(headline(t, withLabel: false) + " ·")
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .foregroundColor(t.color.opacity(0.9))
+                            .fixedSize()
+                    }
+                    InputField(text: $labelDraft,
+                               placeholder: "Label",
+                               onSubmit: { saveLabel($0) },
+                               onCancel: { panels.editingLabelID = nil },
+                               fontSize: 13,
+                               textColor: NSColor(t.color),
+                               onEndEditing: { saveLabel($0) })
+                        .frame(minWidth: 160, maxWidth: .infinity)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(RoundedRectangle(cornerRadius: 5).fill(Color.white.opacity(0.08)))
+                        .onAppear { labelDraft = t.label }
+                } else {
+                    Text(pomo ? headline(t) : (t.label.isEmpty ? "Timer" : t.label))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundColor(t.color.opacity(0.9))
+                        .lineLimit(1)
+                        .onTapGesture { panels.editLabel(timerID) }
+                        .help("Klicken, um das Label zu ändern")
+                }
                 Spacer(minLength: 20)
                 Button { panels.closeDetail(timerID) } label: {
                     Image(systemName: "chevron.down")
@@ -110,9 +134,15 @@ struct DetailView: View {
         .contextMenu { TimerMenu(timer: t) }
     }
 
-    private func headline(_ t: CountdownTimer) -> String {
+    private func saveLabel(_ text: String) {
+        store.setLabel(timerID, text)
+        panels.editingLabelID = nil
+    }
+
+    private func headline(_ t: CountdownTimer, withLabel: Bool = true) -> String {
+        let label = withLabel && !t.label.isEmpty ? " · \(t.label)" : ""
         switch t.kind {
-        case .pomodoro: return "Tomate \(store.tomatoNumberToday(t)) heute" + (t.label.isEmpty ? "" : " · \(t.label)")
+        case .pomodoro: return "Tomate \(store.tomatoNumberToday(t)) heute" + label
         case .longBreak: return "Lange Pause"
         default: return "Pause"
         }

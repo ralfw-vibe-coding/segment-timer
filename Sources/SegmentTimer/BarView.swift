@@ -201,6 +201,7 @@ struct TimerMenu: View {
 
     @ViewBuilder private var pomodoroMenu: some View {
         Button("Details") { panels.openDetail(timer.id) }
+        Button("Label ändern …") { panels.editLabel(timer.id) }
         Button(timer.state == .paused ? "Fortsetzen" : "Anhalten") { store.togglePause(timer.id) }
         if timer.kind.isBreak {
             Button("Pause überspringen → nächste Tomate") { store.pomoNextTomato() }
@@ -214,6 +215,7 @@ struct TimerMenu: View {
 
     @ViewBuilder private var normalMenu: some View {
         Button("Details") { panels.openDetail(timer.id) }
+        Button("Label ändern …") { panels.editLabel(timer.id) }
         Button(timer.state == .paused ? "Fortsetzen" : "Pause") { store.togglePause(timer.id) }
         Button("Zurücksetzen") { store.reset(timer.id) }
         Menu("Farbe") {
@@ -316,6 +318,10 @@ struct InputField: NSViewRepresentable {
     let placeholder: String
     let onSubmit: (String) -> Void
     let onCancel: () -> Void
+    var fontSize: CGFloat = 14
+    var textColor: NSColor = .white
+    /// Fokus verlassen (z.B. Klick woanders hin) – nicht bei Enter/Esc
+    var onEndEditing: ((String) -> Void)? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -324,9 +330,9 @@ struct InputField: NSViewRepresentable {
         field.isBordered = false
         field.drawsBackground = false
         field.focusRingType = .none
-        field.textColor = .white
-        let base = NSFont.systemFont(ofSize: 14, weight: .medium)
-        field.font = base.fontDescriptor.withDesign(.rounded).flatMap { NSFont(descriptor: $0, size: 14) } ?? base
+        field.textColor = textColor
+        let base = NSFont.systemFont(ofSize: fontSize, weight: .medium)
+        field.font = base.fontDescriptor.withDesign(.rounded).flatMap { NSFont(descriptor: $0, size: fontSize) } ?? base
         field.placeholderAttributedString = NSAttributedString(
             string: placeholder,
             attributes: [.foregroundColor: NSColor.white.withAlphaComponent(0.35), .font: field.font ?? base]
@@ -353,7 +359,15 @@ struct InputField: NSViewRepresentable {
 
     final class Coordinator: NSObject, NSTextFieldDelegate {
         var parent: InputField
+        /// Enter oder Esc wurde schon verarbeitet
+        private var finished = false
         init(_ parent: InputField) { self.parent = parent }
+
+        func controlTextDidEndEditing(_ note: Notification) {
+            guard !finished, let field = note.object as? NSTextField else { return }
+            finished = true
+            parent.onEndEditing?(field.stringValue)
+        }
 
         /// Vorhersage/Autokorrektur im Feld-Editor aus – sonst übernimmt
         /// der erste Enter-Druck nur den grauen Vorschlag.
@@ -381,9 +395,11 @@ struct InputField: NSViewRepresentable {
             if textView.hasMarkedText() { return false }
             switch selector {
             case #selector(NSResponder.insertNewline(_:)):
+                finished = parent.onEndEditing != nil
                 parent.onSubmit(textView.string)
                 return true
             case #selector(NSResponder.cancelOperation(_:)):
+                finished = true
                 parent.onCancel()
                 return true
             default:

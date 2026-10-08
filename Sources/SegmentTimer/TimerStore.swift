@@ -147,6 +147,12 @@ final class TimerStore: ObservableObject {
         timers = copy
     }
 
+    /// Label ändern. Bei einer Tomate gilt es für die laufende und alle weiteren Tomaten der Runde.
+    func setLabel(_ id: UUID, _ label: String) {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        mutate(id) { $0.label = trimmed }
+    }
+
     func remove(_ id: UUID) {
         timers.removeAll { $0.id == id }
     }

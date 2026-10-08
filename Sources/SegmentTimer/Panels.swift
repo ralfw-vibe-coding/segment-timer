@@ -124,6 +124,8 @@ private struct WindowDragModifier: ViewModifier {
 final class PanelController: ObservableObject {
     @Published private(set) var inputVisible = false
     @Published private(set) var openDetails: Set<UUID> = []
+    /// Timer, dessen Label gerade in der Detailansicht bearbeitet wird
+    @Published var editingLabelID: UUID?
 
     let store: TimerStore
     let settings: AppSettings
@@ -316,7 +318,15 @@ final class PanelController: ObservableObject {
         openDetails.insert(id)
     }
 
+    /// Detailansicht öffnen und das Label direkt bearbeitbar machen.
+    func editLabel(_ id: UUID) {
+        openDetail(id)
+        editingLabelID = id
+        detailPanels[id]?.makeKeyAndOrderFront(nil)
+    }
+
     func closeDetail(_ id: UUID) {
+        if editingLabelID == id { editingLabelID = nil }
         detailPanels.removeValue(forKey: id)?.orderOut(nil)
         openDetails.remove(id)
     }

@@ -21,6 +21,7 @@ Gebaut nur mit Swift Package Manager, ohne Xcode-Projekt.
 | Neuer Timer | `+` in der Leiste, **⌥⌘T** (global) oder Menüleisten-Symbol |
 | Details (Countdown, Ablaufzeit, Reset/Pause/Stopp) | Klick auf einen Timer in der Leiste, Fenster ist verschiebbar, Esc schließt |
 | Pause, Reset, Farbe, Löschen | Rechtsklick auf einen Timer |
+| Label ändern (auch Tomaten) | Klick auf den Titel in der Detailansicht oder Rechtsklick → „Label ändern …“; Enter speichert, Esc bricht ab |
 | Alarm stoppen | Enter oder Esc bzw. „Stopp“; außerdem +1 min, +5 min, Neustart |
 | Position, Ton, MP3, Lautstärke | Rechtsklick auf die Leiste → Einstellungen |
 
