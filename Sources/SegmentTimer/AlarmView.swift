@@ -11,7 +11,7 @@ struct AlarmView: View {
         let blinkOn = Int(now.timeIntervalSinceReferenceDate * 2) % 2 == 0
         let accent = expired.first?.color ?? .white
 
-        VStack(spacing: 26) {
+        VStack(spacing: 16) {
             ForEach(expired) { t in
                 AlarmRow(timer: t, now: now, blinkOn: blinkOn, showStop: expired.count > 1)
             }
@@ -20,26 +20,27 @@ struct AlarmView: View {
                 store.removeAllExpired()
             } label: {
                 Text(expired.count > 1 ? "Alle stoppen" : "Stopp")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
                     .foregroundColor(.black)
-                    .frame(minWidth: 220)
-                    .padding(.vertical, 12)
-                    .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(accent))
+                    .frame(minWidth: 140)
+                    .padding(.vertical, 7)
+                    .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(accent))
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .focusable(false)
             .keyboardShortcut(.defaultAction)
             .help("Alarm stoppen (Enter oder Esc)")
         }
-        .padding(.horizontal, 44)
-        .padding(.vertical, 34)
+        .padding(.horizontal, 26)
+        .padding(.vertical, 20)
         .background(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .fill(Color.black.opacity(0.95))
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(Color(white: 0.04))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .strokeBorder(accent.opacity(blinkOn ? 0.9 : 0.25), lineWidth: 3)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(accent.opacity(blinkOn ? 0.7 : 0.2), lineWidth: 1.5)
         )
         .dragsWindow(window)
     }
@@ -55,20 +56,20 @@ private struct AlarmRow: View {
     var body: some View {
         let overdue = Int(now.timeIntervalSince(timer.endDate))
 
-        VStack(spacing: 14) {
+        VStack(spacing: 9) {
             Text(timer.label.isEmpty ? "Timer abgelaufen" : timer.label)
-                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .font(.system(size: 17, weight: .bold, design: .rounded))
                 .foregroundColor(timer.color)
                 .lineLimit(1)
 
-            SegmentClock(seconds: 0, color: timer.color, height: showStop ? 80 : 130, colonOn: true, digitsOn: blinkOn)
+            SegmentClock(seconds: 0, color: timer.color, height: showStop ? 48 : 72, colonOn: true, digitsOn: blinkOn)
 
             Text("abgelaufen um \(Format.clock(timer.endDate))" + (overdue >= 5 ? " · vor \(Format.compact(overdue))" : ""))
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(.system(size: 11, weight: .medium, design: .rounded))
                 .monospacedDigit()
                 .foregroundColor(timer.color.opacity(0.7))
 
-            HStack(spacing: 10) {
+            HStack(spacing: 7) {
                 PillButton(title: "+1 min", color: timer.color) { store.snooze(timer.id, minutes: 1) }
                 PillButton(title: "+5 min", color: timer.color) { store.snooze(timer.id, minutes: 5) }
                 PillButton(title: "↻ \(Format.duration(timer.duration))", color: timer.color) { store.restart(timer.id) }
@@ -90,16 +91,17 @@ private struct PillButton: View {
     var body: some View {
         Button(action: action) {
             Text(title)
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(.system(size: 11, weight: .semibold, design: .rounded))
                 .foregroundColor(filled ? .black : color)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 4)
                 .background(
                     Capsule().fill(filled ? color : color.opacity(hovering ? 0.25 : 0.12))
                 )
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
+        .focusable(false)
         .onHover { hovering = $0 }
     }
 }
