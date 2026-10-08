@@ -1,15 +1,12 @@
 import AppKit
-import Combine
 import SwiftUI
 
-/// Symbol in der Menüleiste mit dem nächsten Countdown und einem Menü.
+/// Symbol in der Menüleiste mit einem Menü (Neuer Timer, Timer-Liste, Einstellungen, Beenden).
 final class StatusItemController: NSObject, NSMenuDelegate {
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
     private let store: TimerStore
     private let settings: AppSettings
     private let panels: PanelController
-    private var cancellables = Set<AnyCancellable>()
-    private var lastTitle = ""
 
     init(store: TimerStore, settings: AppSettings, panels: PanelController) {
         self.store = store
@@ -21,33 +18,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
             let image = NSImage(systemSymbolName: "timer", accessibilityDescription: "Segment Timer")
             image?.isTemplate = true
             button.image = image
-            button.imagePosition = .imageLeading
         }
         let menu = NSMenu()
         menu.delegate = self
         item.menu = menu
-
-        store.$now
-            .combineLatest(settings.$showInMenuBar)
-            .sink { [weak self] _ in self?.updateTitle() }
-            .store(in: &cancellables)
-    }
-
-    private func updateTitle() {
-        var title = ""
-        if settings.showInMenuBar {
-            if !store.expired.isEmpty {
-                title = "0:00"
-            } else if let next = store.nextTimer {
-                title = Format.compact(next.displaySeconds(at: store.now))
-            }
-        }
-        guard title != lastTitle, let button = item.button else { return }
-        lastTitle = title
-        button.attributedTitle = NSAttributedString(
-            string: title.isEmpty ? "" : " \(title)",
-            attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .medium)]
-        )
     }
 
     func menuNeedsUpdate(_ menu: NSMenu) {

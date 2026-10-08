@@ -42,9 +42,6 @@ final class AppSettings: ObservableObject {
     @Published var showBar: Bool {
         didSet { defaults.set(showBar, forKey: "showBar") }
     }
-    @Published var showInMenuBar: Bool {
-        didSet { defaults.set(showInMenuBar, forKey: "showInMenuBar") }
-    }
     /// "builtin", "system:<Name>" oder "file"
     @Published var soundChoice: String {
         didSet { defaults.set(soundChoice, forKey: "soundChoice") }
@@ -60,14 +57,12 @@ final class AppSettings: ObservableObject {
         defaults.register(defaults: [
             "corner": BarCorner.bottomRight.rawValue,
             "showBar": true,
-            "showInMenuBar": true,
             "soundChoice": Self.builtinSound,
             "customSoundPath": "",
             "volume": 0.8,
         ])
         corner = BarCorner(rawValue: defaults.string(forKey: "corner") ?? "") ?? .bottomRight
         showBar = defaults.bool(forKey: "showBar")
-        showInMenuBar = defaults.bool(forKey: "showInMenuBar")
         soundChoice = defaults.string(forKey: "soundChoice") ?? Self.builtinSound
         customSoundPath = defaults.string(forKey: "customSoundPath") ?? ""
         volume = defaults.double(forKey: "volume")

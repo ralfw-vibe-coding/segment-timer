@@ -25,7 +25,6 @@ struct SettingsView: View {
                     }
                 }
                 Toggle("Leiste anzeigen", isOn: $settings.showBar)
-                Toggle("Nächsten Timer in der Menüleiste anzeigen", isOn: $settings.showInMenuBar)
             }
 
             Section("Alarmton") {
