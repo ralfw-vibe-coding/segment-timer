@@ -18,10 +18,15 @@ struct DetailView: View {
     private func content(_ t: CountdownTimer) -> some View {
         let now = store.now
         let paused = t.state == .paused
+        let pomo = t.kind.isPomodoroPhase
 
         return VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text(t.label.isEmpty ? "Timer" : t.label)
+            HStack(spacing: 8) {
+                if pomo {
+                    PomoDots(index: t.pomoIndex, total: store.settings.longBreakEvery, kind: t.kind,
+                             color: TimerPalette.tomato, size: 6)
+                }
+                Text(pomo ? headline(t) : (t.label.isEmpty ? "Timer" : t.label))
                     .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundColor(t.color.opacity(0.9))
                     .lineLimit(1)
@@ -37,13 +42,18 @@ struct DetailView: View {
                 .help("Verkleinern (Esc)")
             }
 
-            SegmentClock(
-                seconds: t.displaySeconds(at: now),
-                color: t.color,
-                height: 96,
-                colonOn: t.colonOn(at: now)
-            )
-            .opacity(paused ? 0.5 : 1)
+            HStack(spacing: 96 * 0.22) {
+                if pomo {
+                    PomoBadge(kind: t.kind, color: t.color, height: 96, dimmed: paused)
+                }
+                SegmentClock(
+                    seconds: t.displaySeconds(at: now),
+                    color: t.color,
+                    height: 96,
+                    colonOn: t.colonOn(at: now)
+                )
+                .opacity(paused ? 0.5 : 1)
+            }
             .padding(.horizontal, 4)
 
             HStack(alignment: .center) {
@@ -54,16 +64,35 @@ struct DetailView: View {
                     .help(paused ? "Pausiert" : "Ablaufzeit")
                 Spacer(minLength: 24)
                 HStack(spacing: 10) {
-                    SquareButton(symbol: "arrow.counterclockwise", color: t.color, help: "Zurücksetzen auf \(Format.duration(t.duration))") {
-                        store.reset(timerID)
-                    }
-                    SquareButton(symbol: paused ? "play.fill" : "pause.fill", color: t.color, help: paused ? "Fortsetzen" : "Pause") {
-                        store.togglePause(timerID)
-                    }
-                    SquareButton(symbol: "xmark", color: t.color, help: "Timer stoppen und löschen") {
-                        store.remove(timerID)
+                    if pomo {
+                        if t.kind.isBreak {
+                            SquareButton(symbol: "forward.end.fill", color: t.color, help: "Pause überspringen → nächste Tomate") {
+                                store.pomoNextTomato()
+                            }
+                        }
+                        SquareButton(symbol: paused ? "play.fill" : "pause.fill", color: t.color, help: paused ? "Fortsetzen" : "Anhalten") {
+                            store.togglePause(timerID)
+                        }
+                        SquareButton(symbol: "xmark", color: t.color,
+                                     help: t.kind == .pomodoro ? "Tomate abbrechen – zählt mit der bisherigen Zeit, beendet die Runde" : "Runde beenden") {
+                            store.endPomodoroRound()
+                        }
+                    } else {
+                        SquareButton(symbol: "arrow.counterclockwise", color: t.color, help: "Zurücksetzen auf \(Format.duration(t.duration))") {
+                            store.reset(timerID)
+                        }
+                        SquareButton(symbol: paused ? "play.fill" : "pause.fill", color: t.color, help: paused ? "Fortsetzen" : "Pause") {
+                            store.togglePause(timerID)
+                        }
+                        SquareButton(symbol: "xmark", color: t.color, help: "Timer stoppen und löschen") {
+                            store.remove(timerID)
+                        }
                     }
                 }
+            }
+
+            if pomo {
+                TodayPomodoroStrip(current: t)
             }
         }
         .padding(.horizontal, 22)
@@ -79,6 +108,15 @@ struct DetailView: View {
         )
         .dragsWindow(window)
         .contextMenu { TimerMenu(timer: t) }
+    }
+
+    private func headline(_ t: CountdownTimer) -> String {
+        let n = store.settings.longBreakEvery
+        switch t.kind {
+        case .pomodoro: return "Tomate \(t.pomoIndex) von \(n)" + (t.label.isEmpty ? "" : " · \(t.label)")
+        case .longBreak: return "Lange Pause"
+        default: return "Pause"
+        }
     }
 }
 

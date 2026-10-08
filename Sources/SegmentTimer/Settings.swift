@@ -53,6 +53,21 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(volume, forKey: "volume") }
     }
 
+    // Pomodoro (alle Werte in Minuten)
+    @Published var pomoMinutes: Int {
+        didSet { defaults.set(pomoMinutes, forKey: "pomoMinutes") }
+    }
+    @Published var shortBreakMinutes: Int {
+        didSet { defaults.set(shortBreakMinutes, forKey: "shortBreakMinutes") }
+    }
+    @Published var longBreakMinutes: Int {
+        didSet { defaults.set(longBreakMinutes, forKey: "longBreakMinutes") }
+    }
+    /// Lange Pause nach so vielen Tomaten
+    @Published var longBreakEvery: Int {
+        didSet { defaults.set(longBreakEvery, forKey: "longBreakEvery") }
+    }
+
     init() {
         defaults.register(defaults: [
             "corner": BarCorner.bottomRight.rawValue,
@@ -60,12 +75,20 @@ final class AppSettings: ObservableObject {
             "soundChoice": Self.builtinSound,
             "customSoundPath": "",
             "volume": 0.8,
+            "pomoMinutes": 25,
+            "shortBreakMinutes": 5,
+            "longBreakMinutes": 15,
+            "longBreakEvery": 4,
         ])
         corner = BarCorner(rawValue: defaults.string(forKey: "corner") ?? "") ?? .bottomRight
         showBar = defaults.bool(forKey: "showBar")
         soundChoice = defaults.string(forKey: "soundChoice") ?? Self.builtinSound
         customSoundPath = defaults.string(forKey: "customSoundPath") ?? ""
         volume = defaults.double(forKey: "volume")
+        pomoMinutes = defaults.integer(forKey: "pomoMinutes")
+        shortBreakMinutes = defaults.integer(forKey: "shortBreakMinutes")
+        longBreakMinutes = defaults.integer(forKey: "longBreakMinutes")
+        longBreakEvery = max(1, defaults.integer(forKey: "longBreakEvery"))
         if let d = defaults.dictionary(forKey: "barAnchor"),
            let x = d["x"] as? Double, let y = d["y"] as? Double, let right = d["right"] as? Bool {
             barAnchor = BarAnchor(x: x, y: y, right: right)

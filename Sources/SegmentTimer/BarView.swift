@@ -20,8 +20,15 @@ struct BarView: View {
                     TimerChip(timer: t, isNext: t.id == timers.first?.id)
                 }
                 if !panels.inputVisible {
-                    AddButton(enabled: store.canAdd,
-                              color: TimerPalette.color(store.nextFreeColor())) { panels.showInput() }
+                    // Tomaten-Knopf unter dem "+"; beide etwas kleiner, damit die Leiste nicht höher wird
+                    VStack(spacing: 3) {
+                        AddButton(enabled: store.canAdd,
+                                  color: TimerPalette.color(store.nextFreeColor()),
+                                  size: store.canStartPomodoro ? 18 : 22) { panels.showInput() }
+                        if store.canStartPomodoro {
+                            PomoButton { store.startPomodoro() }
+                        }
+                    }
                 }
             }
         }
@@ -53,6 +60,9 @@ private struct BarMenu: View {
     var body: some View {
         Button("Neuer Timer …  (⌥⌘T)") { panels.showInput() }
             .disabled(!store.canAdd)
+        Button("Tomate starten") { store.startPomodoro() }
+            .disabled(!store.canStartPomodoro)
+        Button("Pomodoro-Verlauf …") { panels.openHistory() }
         Divider()
         Button("Nach links unten") { settings.corner = .bottomLeft }
         Button("Nach rechts unten") { settings.corner = .bottomRight }
@@ -67,16 +77,17 @@ private struct AddButton: View {
     let enabled: Bool
     /// Farbe, die der nächste Timer bekommt – als blasses Neon
     let color: Color
+    var size: CGFloat = 22
     let action: () -> Void
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "plus")
-                .font(.system(size: 12, weight: .heavy))
+                .font(.system(size: size * 0.55, weight: .heavy))
                 .foregroundColor(enabled ? color.opacity(hovering ? 1 : 0.75) : .white.opacity(0.2))
                 .shadow(color: enabled ? color.opacity(hovering ? 0.8 : 0.5) : .clear, radius: 3)
-                .frame(width: 22, height: 22)
+                .frame(width: size, height: size)
                 .background(Circle().fill(enabled ? color.opacity(hovering ? 0.22 : 0.12) : Color.white.opacity(0.06)))
                 .overlay(Circle().strokeBorder(color.opacity(enabled ? 0.25 : 0), lineWidth: 1))
                 .contentShape(Circle())
@@ -85,6 +96,26 @@ private struct AddButton: View {
         .disabled(!enabled)
         .onHover { hovering = $0 }
         .help(enabled ? "Neuer Timer (⌥⌘T)" : "Maximal \(TimerStore.maxTimers) Timer")
+    }
+}
+
+/// Startet die Pomodoro-Runde (nur sichtbar, solange keine läuft).
+private struct PomoButton: View {
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            TomatoIcon(size: 9, glow: hovering)
+                .opacity(hovering ? 1 : 0.75)
+                .frame(width: 22, height: 13)
+                .background(Capsule().fill(TimerPalette.tomato.opacity(hovering ? 0.22 : 0.1)))
+                .overlay(Capsule().strokeBorder(TimerPalette.tomato.opacity(0.25), lineWidth: 1))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .help("Tomate starten (oder \"pomo\" eingeben)")
     }
 }
 
@@ -100,17 +131,28 @@ struct TimerChip: View {
         let now = store.now
         let paused = timer.state == .paused
         let open = panels.openDetails.contains(timer.id)
+        let digitHeight: CGFloat = isNext ? 16 : 12
 
         VStack(spacing: 3) {
-            SegmentClock(
-                seconds: timer.displaySeconds(at: now),
-                color: timer.color,
-                height: isNext ? 16 : 12,
-                colonOn: timer.colonOn(at: now)
-            )
-            .opacity(paused ? 0.45 : 1)
+            HStack(spacing: digitHeight * 0.3) {
+                if timer.kind.isPomodoroPhase {
+                    PomoBadge(kind: timer.kind, color: timer.color, height: digitHeight, dimmed: paused)
+                }
+                SegmentClock(
+                    seconds: timer.displaySeconds(at: now),
+                    color: timer.color,
+                    height: digitHeight,
+                    colonOn: timer.colonOn(at: now)
+                )
+                .opacity(paused ? 0.45 : 1)
+            }
 
             HStack(spacing: 3) {
+                if timer.kind.isPomodoroPhase {
+                    PomoDots(index: timer.pomoIndex, total: store.settings.longBreakEvery,
+                             kind: timer.kind, color: TimerPalette.tomato, size: 4)
+                        .padding(.trailing, 2)
+                }
                 if paused {
                     Image(systemName: "pause.fill").font(.system(size: 7, weight: .bold))
                 }
@@ -139,7 +181,7 @@ struct TimerChip: View {
         .contentShape(Rectangle())
         .onTapGesture { panels.toggleDetail(timer.id) }
         .onHover { hovering = $0 }
-        .help(timer.label.isEmpty ? "Timer" : timer.label)
+        .help(timer.title)
         .contextMenu { TimerMenu(timer: timer) }
     }
 }
@@ -150,6 +192,27 @@ struct TimerMenu: View {
     @EnvironmentObject var panels: PanelController
 
     var body: some View {
+        if timer.kind.isPomodoroPhase {
+            pomodoroMenu
+        } else {
+            normalMenu
+        }
+    }
+
+    @ViewBuilder private var pomodoroMenu: some View {
+        Button("Details") { panels.openDetail(timer.id) }
+        Button(timer.state == .paused ? "Fortsetzen" : "Anhalten") { store.togglePause(timer.id) }
+        if timer.kind.isBreak {
+            Button("Pause überspringen → nächste Tomate") { store.pomoNextTomato() }
+        }
+        Button("Pomodoro-Verlauf …") { panels.openHistory() }
+        Divider()
+        Button(timer.kind == .pomodoro ? "Tomate abbrechen (beendet die Runde)" : "Runde beenden") {
+            store.endPomodoroRound()
+        }
+    }
+
+    @ViewBuilder private var normalMenu: some View {
         Button("Details") { panels.openDetail(timer.id) }
         Button(timer.state == .paused ? "Fortsetzen" : "Pause") { store.togglePause(timer.id) }
         Button("Zurücksetzen") { store.reset(timer.id) }
@@ -174,14 +237,14 @@ struct NewTimerInput: View {
 
     var body: some View {
         let parsed = TimeParser.parse(text, now: store.now)
-        let color = TimerPalette.color(selectedColor)
+        let color = parsed?.isPomodoro == true ? TimerPalette.tomato : TimerPalette.color(selectedColor)
 
         VStack(alignment: .leading, spacing: 7) {
             HStack(spacing: 6) {
                 Image(systemName: "timer")
                     .foregroundColor(color)
                 InputField(text: $text,
-                           placeholder: "9 · 1:30h Pizza · 14:45 Meeting",
+                           placeholder: "9 · 1:30h Pizza · 14:45 · pomo",
                            onSubmit: submit,
                            onCancel: { panels.hideInput() })
                     .frame(maxWidth: .infinity)
@@ -217,6 +280,11 @@ struct NewTimerInput: View {
 
     private func preview(_ p: ParsedTimer?) -> String {
         guard let p else { return text.isEmpty ? "Enter startet · Esc bricht ab" : "Nicht verstanden" }
+        if p.isPomodoro {
+            if store.pomodoro != nil { return "Es läuft schon eine Tomate" }
+            let minutes = TimeInterval(store.settings.pomoMinutes * 60)
+            return "Tomate · \(Format.duration(minutes)) → \(Format.clock(store.now.addingTimeInterval(minutes)))"
+        }
         if p.isClockTime {
             return "bis \(Format.clock(p.endDate)) · \(Format.duration(p.duration))"
         }
@@ -228,7 +296,14 @@ struct NewTimerInput: View {
             NSSound.beep()
             return
         }
-        store.add(p, colorIndex: selectedColor)
+        if p.isPomodoro {
+            guard store.startPomodoro(label: p.label) else {
+                NSSound.beep()
+                return
+            }
+        } else {
+            store.add(p, colorIndex: selectedColor)
+        }
         text = ""
         panels.hideInput()
     }

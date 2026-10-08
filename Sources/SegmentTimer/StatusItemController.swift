@@ -33,12 +33,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         add.isEnabled = store.canAdd
         menu.addItem(add)
 
+        let pomo = NSMenuItem(title: "Tomate starten", action: #selector(startPomodoro), keyEquivalent: "")
+        pomo.target = self
+        pomo.isEnabled = store.canStartPomodoro
+        menu.addItem(pomo)
+
         let timers = store.expired + store.activeSorted
         if !timers.isEmpty {
             menu.addItem(.separator())
             for t in timers {
                 let time = t.state == .expired ? "abgelaufen" : Format.compact(t.displaySeconds(at: store.now))
-                let name = t.label.isEmpty ? "Timer" : t.label
+                let name = t.title
                 let entry = NSMenuItem(title: "\(name) – \(time)\(t.state == .paused ? " (Pause)" : "")",
                                        action: #selector(openTimer(_:)), keyEquivalent: "")
                 entry.target = self
@@ -53,6 +58,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         bar.target = self
         bar.state = settings.showBar ? .on : .off
         menu.addItem(bar)
+
+        let history = NSMenuItem(title: "Pomodoro-Verlauf …", action: #selector(openHistory), keyEquivalent: "")
+        history.target = self
+        menu.addItem(history)
 
         let prefs = NSMenuItem(title: "Einstellungen …", action: #selector(openSettings), keyEquivalent: ",")
         prefs.target = self
@@ -82,6 +91,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 
     @objc private func toggleBar() { panels.toggleBar() }
+
+    @objc private func startPomodoro() { store.startPomodoro() }
+
+    @objc private func openHistory() { panels.openHistory() }
 
     @objc private func openSettings() { panels.openSettings() }
 }

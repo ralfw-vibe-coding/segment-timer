@@ -4,6 +4,7 @@ import AVFoundation
 final class AlarmPlayer: NSObject, AVAudioPlayerDelegate {
     private let settings: AppSettings
     private var player: AVAudioPlayer?
+    private var shortPlayer: AVAudioPlayer?
     private(set) var isRinging = false
 
     init(settings: AppSettings) {
@@ -20,6 +21,21 @@ final class AlarmPlayer: NSObject, AVAudioPlayerDelegate {
         isRinging = false
         player?.stop()
         player = nil
+    }
+
+    /// Kurzer Hinweiston (Ende einer Tomate/Pause): einmal, höchstens ein paar Sekunden.
+    func playShort(maxSeconds: TimeInterval = 4) {
+        guard !isRinging else { return }      // ein laufender Alarm ist ohnehin zu hören
+        shortPlayer?.stop()
+        let p = makePlayer()
+        p?.volume = Float(settings.volume)
+        p?.play()
+        shortPlayer = p
+        DispatchQueue.main.asyncAfter(deadline: .now() + maxSeconds) { [weak self] in
+            guard let self, self.shortPlayer === p else { return }
+            p?.stop()
+            self.shortPlayer = nil
+        }
     }
 
     /// Einmal abspielen (Einstellungen → Probehören).

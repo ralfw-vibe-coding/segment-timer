@@ -6,6 +6,11 @@ struct SevenSegmentDigit: View {
     let color: Color
     let height: CGFloat
     var glow: Bool = true
+    /// Eigenes Segmentmuster (a…g), z.B. für Buchstaben – hat Vorrang vor `digit`.
+    var pattern: [Bool]? = nil
+
+    /// "P" – Kennzeichen einer Tomate
+    static let letterP = [true, true, false, false, true, true, true]
 
     //                         a      b      c      d      e      f      g
     private static let map: [[Bool]] = [
@@ -28,7 +33,7 @@ struct SevenSegmentDigit: View {
         let pad = height * 0.08
         Canvas { ctx, _ in
             let segments = Self.segments(w: w, h: height, offset: pad)
-            let lit = digit.map { Self.map[$0 % 10] } ?? Array(repeating: false, count: 7)
+            let lit = pattern ?? digit.map { Self.map[$0 % 10] } ?? Array(repeating: false, count: 7)
             for i in 0..<7 where !lit[i] {
                 ctx.fill(segments[i], with: .color(color.opacity(0.13)))
             }

@@ -81,10 +81,11 @@ private struct AlarmRow: View {
     }
 }
 
-private struct PillButton: View {
+struct PillButton: View {
     let title: String
     let color: Color
     var filled = false
+    var shortcut: KeyboardShortcut? = nil
     let action: () -> Void
     @State private var hovering = false
 
@@ -102,6 +103,7 @@ private struct PillButton: View {
         }
         .buttonStyle(.plain)
         .focusable(false)
+        .keyboardShortcut(shortcut)
         .onHover { hovering = $0 }
     }
 }

@@ -24,6 +24,16 @@ Gebaut nur mit Swift Package Manager, ohne Xcode-Projekt.
 | Alarm stoppen | Enter oder Esc bzw. „Stopp“; außerdem +1 min, +5 min, Neustart |
 | Position, Ton, MP3, Lautstärke | Rechtsklick auf die Leiste → Einstellungen |
 
+### Pomodoro
+
+- Start mit dem Tomaten-Knopf unter dem `+` oder durch Eingabe von `pomo` (`p`, `pomodoro`, auch mit Label: `pomo Kapitel 3`)
+- Es läuft immer höchstens eine Tomate, sie zählt zu den 5 Timern
+- In der Leiste: Siebensegment-„P“ vor dem Countdown, Punkte ●●◐○ zeigen die Position im Satz; in der Pause eine Tasse
+- Nach einer Tomate: Dialog mit Pause (jede 4. eine lange) · Nächste Tomate · Beenden; nach der Pause: Nächste Tomate · Beenden
+- Tomaten lassen sich anhalten und fortsetzen. Abbrechen zählt die bisherige Zeit und beendet die Runde (die nächste beginnt wieder bei 1)
+- Verlauf: Detailansicht der Tomate (heutiger Tag) und Fenster „Pomodoro-Verlauf“ (Rechtsklick auf die Leiste), eine Zeile pro Tag
+- Längen in den Einstellungen; Protokoll in `~/Library/Application Support/Segment Timer/pomodoro-log.json`
+
 ### Eingabe
 
 Zahlen ohne Einheit sind Minuten. Text vor oder nach der Zeit wird zum Label.
@@ -34,6 +44,7 @@ Zahlen ohne Einheit sind Minuten. Text vor oder nach der Zeit wird zum Label.
 | `1:30h`, `1,5h`, `1h 30`, `2:30min`, `1:30:00` | Dauer |
 | `12:30`, `14:45`, `um 9`, `18 Uhr`, `12.30` | Ablaufzeit (liegt sie in der Vergangenheit, dann morgen) |
 | `9 Tee`, `Meeting 14:45` | mit Label |
+| `pomo`, `pomo Kapitel 3` | Tomate starten |
 
 ## Code
 

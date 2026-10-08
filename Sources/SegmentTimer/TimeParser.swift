@@ -5,6 +5,8 @@ struct ParsedTimer: Equatable {
     let endDate: Date
     let isClockTime: Bool
     let label: String
+    /// "pomo" / "pomodoro" / "p" – Dauer kommt dann aus den Einstellungen.
+    var isPomodoro = false
 }
 
 /// Versteht Eingaben wie:
@@ -18,6 +20,17 @@ enum TimeParser {
     static func parse(_ input: String, now: Date = Date()) -> ParsedTimer? {
         let tokens = input.split(whereSeparator: \.isWhitespace).map(String.init)
         guard !tokens.isEmpty else { return nil }
+
+        // Tomate: "pomo", "pomo Kapitel 3", "Kapitel 3 pomo"
+        let pomoWords: Set<String> = ["p", "pomo", "pomodoro", "tomate"]
+        if pomoWords.contains(tokens[0].lowercased()) {
+            return ParsedTimer(duration: 0, endDate: now, isClockTime: false,
+                               label: tokens.dropFirst().joined(separator: " "), isPomodoro: true)
+        }
+        if tokens.count > 1, pomoWords.contains(tokens[tokens.count - 1].lowercased()) {
+            return ParsedTimer(duration: 0, endDate: now, isClockTime: false,
+                               label: tokens.dropLast().joined(separator: " "), isPomodoro: true)
+        }
 
         // Zeitangabe vorne, Rest ist Label (längster passender Präfix gewinnt)
         for k in stride(from: tokens.count, through: 1, by: -1) {

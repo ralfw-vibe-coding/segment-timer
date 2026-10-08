@@ -57,6 +57,24 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Pomodoro") {
+                Stepper(value: $settings.pomoMinutes, in: 5...120, step: 5) {
+                    LabeledContent("Länge einer Tomate", value: "\(settings.pomoMinutes) min")
+                }
+                Stepper(value: $settings.shortBreakMinutes, in: 1...60) {
+                    LabeledContent("Kurze Pause", value: "\(settings.shortBreakMinutes) min")
+                }
+                Stepper(value: $settings.longBreakMinutes, in: 1...90) {
+                    LabeledContent("Lange Pause", value: "\(settings.longBreakMinutes) min")
+                }
+                Stepper(value: $settings.longBreakEvery, in: 2...8) {
+                    LabeledContent("Lange Pause nach", value: "\(settings.longBreakEvery) Tomaten")
+                }
+                Text("Start mit dem Tomaten-Knopf unter dem „+“ oder durch Eingabe von „pomo“. Es läuft immer höchstens eine Tomate.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
             Section("Allgemein") {
                 Toggle("Beim Anmelden starten", isOn: Binding(
                     get: { settings.launchAtLogin },
@@ -69,7 +87,7 @@ struct SettingsView: View {
                     Text(loginError).font(.caption).foregroundColor(.red)
                 }
                 LabeledContent("Neuer Timer", value: "⌥⌘T (überall)")
-                LabeledContent("Eingabe", value: "9 · 1:30h · 1,5h · 14:45 · 9 Tee")
+                LabeledContent("Eingabe", value: "9 · 1:30h · 1,5h · 14:45 · 9 Tee · pomo")
             }
         }
         .formStyle(.grouped)

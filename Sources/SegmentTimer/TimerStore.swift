@@ -11,17 +11,23 @@ final class TimerStore: ObservableObject {
     /// Wird ca. 4× pro Sekunde aktualisiert und treibt alle Anzeigen.
     @Published private(set) var now = Date()
 
+    let settings: AppSettings
+    let log: PomodoroLog
     private var ticker: Timer?
 
     /// Nur für Vorschau-Renderings (--render-preview): feste Timer, kein Speichern.
     private var persist = true
-    init(preview: [CountdownTimer], now: Date) {
+    init(preview: [CountdownTimer], now: Date, settings: AppSettings, log: PomodoroLog) {
+        self.settings = settings
+        self.log = log
         persist = false
         timers = preview
         self.now = now
     }
 
-    init() {
+    init(settings: AppSettings, log: PomodoroLog) {
+        self.settings = settings
+        self.log = log
         load()
         let t = Timer(timeInterval: 0.25, repeats: true) { [weak self] _ in self?.tick() }
         RunLoop.main.add(t, forMode: .common)
@@ -38,15 +44,24 @@ final class TimerStore: ObservableObject {
         return running + paused
     }
 
+    /// Abgelaufene normale Timer (→ Alarmfenster). Tomaten haben ihren eigenen Dialog.
     var expired: [CountdownTimer] {
-        timers.filter { $0.state == .expired }.sorted { $0.endDate < $1.endDate }
+        timers.filter { $0.state == .expired && $0.kind == .normal }.sorted { $0.endDate < $1.endDate }
     }
+
+    /// Die (einzige) Tomate bzw. Pause der laufenden Pomodoro-Runde.
+    var pomodoro: CountdownTimer? { timers.first { $0.kind.isPomodoroPhase } }
+
+    /// Tomate oder Pause ist abgelaufen und wartet auf die Entscheidung, wie es weitergeht.
+    var pomoDue: CountdownTimer? { pomodoro.flatMap { $0.state == .expired ? $0 : nil } }
+
+    var canStartPomodoro: Bool { pomodoro == nil && canAdd }
 
     var nextTimer: CountdownTimer? { activeSorted.first }
 
     var canAdd: Bool { timers.count < Self.maxTimers }
 
-    var usedColors: Set<Int> { Set(timers.map(\.colorIndex)) }
+    var usedColors: Set<Int> { Set(timers.filter { $0.kind == .normal }.map(\.colorIndex)) }
 
     func nextFreeColor() -> Int {
         (0..<TimerPalette.colors.count).first { !usedColors.contains($0) } ?? 0
@@ -79,9 +94,14 @@ final class TimerStore: ObservableObject {
             case .running:
                 t.pausedRemaining = t.remaining(at: now)
                 t.state = .paused
+                if let s = t.segmentStart {
+                    t.segments.append(TimeSegment(start: s, end: now))
+                    t.segmentStart = nil
+                }
             case .paused:
                 t.endDate = now.addingTimeInterval(t.pausedRemaining)
                 t.state = .running
+                if t.kind.isPomodoroPhase { t.segmentStart = now }
             case .expired:
                 break
             }
@@ -132,7 +152,83 @@ final class TimerStore: ObservableObject {
     }
 
     func removeAllExpired() {
-        timers.removeAll { $0.state == .expired }
+        timers.removeAll { $0.state == .expired && $0.kind == .normal }
+    }
+
+    // MARK: - Pomodoro
+
+    @discardableResult
+    func startPomodoro(label: String = "") -> Bool {
+        guard canStartPomodoro else { return false }
+        var t = CountdownTimer(label: label, colorIndex: -1, duration: 0, state: .running, endDate: Date())
+        t.kind = .pomodoro
+        beginPhase(&t, kind: .pomodoro, index: 1)
+        timers.append(t)
+        return true
+    }
+
+    /// Nach einer Tomate: kurze bzw. (jede n-te) lange Pause.
+    func pomoStartBreak() {
+        guard let id = pomodoro?.id else { return }
+        mutate(id) { t in
+            let long = t.pomoIndex % self.settings.longBreakEvery == 0
+            self.beginPhase(&t, kind: long ? .longBreak : .shortBreak, index: t.pomoIndex)
+        }
+    }
+
+    /// Nächste Tomate – nach einer Tomate, nach einer Pause oder als "Pause überspringen".
+    func pomoNextTomato() {
+        guard let id = pomodoro?.id else { return }
+        let now = Date()
+        mutate(id) { t in
+            if t.kind.isBreak && t.state != .expired {
+                self.logPhase(&t, end: now, completed: false)   // Pause übersprungen
+            }
+            let next = t.pomoIndex % self.settings.longBreakEvery + 1
+            self.beginPhase(&t, kind: .pomodoro, index: next)
+        }
+    }
+
+    /// Runde beenden. Eine laufende Tomate zählt mit ihrer bisherigen Zeit als abgebrochen;
+    /// die nächste Runde beginnt wieder mit Tomate 1.
+    func endPomodoroRound() {
+        guard var t = pomodoro else { return }
+        if t.state != .expired { logPhase(&t, end: Date(), completed: false) }
+        remove(t.id)
+    }
+
+    /// Wird die lange Pause nach dieser Tomate fällig?
+    func isLongBreakDue(after t: CountdownTimer) -> Bool {
+        t.pomoIndex % settings.longBreakEvery == 0
+    }
+
+    private func beginPhase(_ t: inout CountdownTimer, kind: TimerKind, index: Int) {
+        let now = Date()
+        let minutes: Int
+        switch kind {
+        case .pomodoro: minutes = settings.pomoMinutes
+        case .longBreak: minutes = settings.longBreakMinutes
+        default: minutes = settings.shortBreakMinutes
+        }
+        t.kind = kind
+        t.pomoIndex = index
+        t.duration = TimeInterval(max(1, minutes) * 60)
+        t.state = .running
+        t.endDate = now.addingTimeInterval(t.duration)
+        t.pausedRemaining = 0
+        t.segments = []
+        t.segmentStart = now
+    }
+
+    /// Phase ins Protokoll schreiben (bis `end`) und Laufzeiten zurücksetzen.
+    private func logPhase(_ t: inout CountdownTimer, end: Date, completed: Bool) {
+        var segs = t.segments
+        if let s = t.segmentStart, end > s { segs.append(TimeSegment(start: s, end: end)) }
+        t.segments = []
+        t.segmentStart = nil
+        guard !segs.isEmpty else { return }
+        log.append(PomodoroRecord(kind: t.kind, label: t.label, index: t.pomoIndex,
+                                  planned: t.duration, segments: segs, completed: completed))
     }
 
     // MARK: - Intern
@@ -147,13 +243,15 @@ final class TimerStore: ObservableObject {
     private func tick() {
         let current = Date()
         now = current
-        if timers.contains(where: { $0.state == .running && $0.endDate <= current }) {
-            timers = timers.map { t in
-                var t = t
-                if t.state == .running && t.endDate <= current { t.state = .expired }
-                return t
+        guard timers.contains(where: { $0.state == .running && $0.endDate <= current }) else { return }
+        var copy = timers
+        for i in copy.indices where copy[i].state == .running && copy[i].endDate <= current {
+            copy[i].state = .expired
+            if copy[i].kind.isPomodoroPhase {
+                logPhase(&copy[i], end: copy[i].endDate, completed: true)
             }
         }
+        timers = copy
     }
 
     private func save() {

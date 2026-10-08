@@ -134,6 +134,10 @@ final class PanelController: ObservableObject {
     private var barDragging = false
     private var detailPanels: [UUID: FloatingPanel] = [:]
     private var alarmPanel: FloatingPanel?
+    private var pomoPanel: FloatingPanel?
+    private var historyWindow: NSWindow?
+    /// Ende der Pomodoro-Phase, für die zuletzt der Hinweiston kam
+    private var lastPomoSignal: Date?
     private var settingsWindow: NSWindow?
     private var cancellables = Set<AnyCancellable>()
 
@@ -185,6 +189,7 @@ final class PanelController: ObservableObject {
                 .fixedSize()
                 .environmentObject(store)
                 .environmentObject(settings)
+                .environmentObject(store.log)
                 .environmentObject(self)
         ))
         host.sizingOptions = [.intrinsicContentSize]
@@ -332,6 +337,66 @@ final class PanelController: ObservableObject {
             showAlarm()
             alarm.start()
         }
+
+        if let due = store.pomoDue {
+            showPomoPrompt()
+            if lastPomoSignal != due.endDate {
+                lastPomoSignal = due.endDate
+                alarm.playShort()
+            }
+        } else {
+            pomoPanel?.orderOut(nil)
+            pomoPanel = nil
+        }
+    }
+
+    /// Dialog nach Ende einer Tomate bzw. Pause – kleiner als der Alarm, ebenfalls mittig.
+    private func showPomoPrompt() {
+        if let pomoPanel {
+            pomoPanel.orderFrontRegardless()
+            return
+        }
+        let panel = FloatingPanel()
+        panel.level = .statusBar
+        panel.contentView = makeHost(PomodoroPromptView(window: { [weak panel] in panel })) { [weak self, weak panel] size in
+            guard let self, let panel, let screen = self.screen else { return }
+            let vf = screen.visibleFrame
+            let w = ceil(size.width), h = ceil(size.height)
+            var y = vf.midY - h / 2 + vf.height * 0.08
+            if let alarm = self.alarmPanel { y = alarm.frame.minY - 12 - h }   // nicht überdecken
+            panel.setFrame(NSRect(x: vf.midX - w / 2, y: max(vf.minY, y), width: w, height: h), display: true)
+            panel.invalidateShadow()
+        }
+        if let screen {
+            panel.setFrame(NSRect(x: screen.visibleFrame.midX - 170, y: screen.visibleFrame.midY - 80, width: 340, height: 160), display: false)
+        }
+        pomoPanel = panel
+        panel.makeKeyAndOrderFront(nil)
+        panel.orderFrontRegardless()
+    }
+
+    // MARK: - Pomodoro-Verlauf
+
+    func openHistory() {
+        if historyWindow == nil {
+            let w = NSWindow(
+                contentRect: NSRect(x: 0, y: 0, width: 760, height: 420),
+                styleMask: [.titled, .closable, .resizable, .miniaturizable],
+                backing: .buffered,
+                defer: false
+            )
+            w.title = "Pomodoro-Verlauf"
+            w.isReleasedWhenClosed = false
+            w.appearance = NSAppearance(named: .darkAqua)
+            w.contentView = NSHostingView(rootView: PomodoroHistoryView()
+                .environmentObject(store.log)
+                .environmentObject(store))
+            w.setContentSize(NSSize(width: 760, height: 420))
+            w.center()
+            historyWindow = w
+        }
+        NSApp.activate(ignoringOtherApps: true)
+        historyWindow?.makeKeyAndOrderFront(nil)
     }
 
     private func showAlarm() {

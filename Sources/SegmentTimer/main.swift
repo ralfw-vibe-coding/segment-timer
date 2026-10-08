@@ -3,7 +3,8 @@ import Carbon.HIToolbox
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let settings = AppSettings()
-    private lazy var store = TimerStore()
+    private lazy var log = PomodoroLog()
+    private lazy var store = TimerStore(settings: settings, log: log)
     private lazy var alarm = AlarmPlayer(settings: settings)
     private var panels: PanelController!
     private var statusItem: StatusItemController!
