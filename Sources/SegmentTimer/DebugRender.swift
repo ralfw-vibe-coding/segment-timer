@@ -30,6 +30,14 @@ enum DebugRender {
         }
 
         save(BarView().fixedSize(), "bar")
+        let emptyStore = TimerStore(preview: [], now: now)
+        let r0 = ImageRenderer(content: BarView().fixedSize()
+            .environmentObject(emptyStore).environmentObject(settings).environmentObject(panels)
+            .padding(30).background(Color(white: 0.3)))
+        r0.scale = 3
+        if let tiff = r0.nsImage?.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+            try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("bar-empty.png")); print("✓ bar-empty.png")
+        }
         save(DetailView(timerID: running[0].id, window: { nil }).fixedSize(), "detail")
         save(DetailView(timerID: running[1].id, window: { nil }).fixedSize(), "detail-hours")
 

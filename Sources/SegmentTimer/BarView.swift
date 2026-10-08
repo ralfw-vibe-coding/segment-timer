@@ -20,7 +20,8 @@ struct BarView: View {
                     TimerChip(timer: t, isNext: t.id == timers.first?.id)
                 }
                 if !panels.inputVisible {
-                    AddButton(enabled: store.canAdd) { panels.showInput() }
+                    AddButton(enabled: store.canAdd,
+                              color: TimerPalette.color(store.nextFreeColor())) { panels.showInput() }
                 }
             }
         }
@@ -34,7 +35,7 @@ struct BarView: View {
             RoundedRectangle(cornerRadius: 11, style: .continuous)
                 .strokeBorder(Color.white.opacity(0.09), lineWidth: 1)
         )
-        .opacity(timers.isEmpty && !panels.inputVisible && !hovering ? 0.55 : 1)
+        .opacity(timers.isEmpty && !panels.inputVisible && !hovering ? 0.8 : 1)
         .onHover { hovering = $0 }
         .dragsWindow({ panels.barWindow },
                      onChanged: { panels.barDragChanged() },
@@ -64,16 +65,20 @@ private struct BarMenu: View {
 
 private struct AddButton: View {
     let enabled: Bool
+    /// Farbe, die der nächste Timer bekommt – als blasses Neon
+    let color: Color
     let action: () -> Void
     @State private var hovering = false
 
     var body: some View {
         Button(action: action) {
             Image(systemName: "plus")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundColor(.white.opacity(enabled ? (hovering ? 0.95 : 0.6) : 0.2))
+                .font(.system(size: 12, weight: .heavy))
+                .foregroundColor(enabled ? color.opacity(hovering ? 1 : 0.75) : .white.opacity(0.2))
+                .shadow(color: enabled ? color.opacity(hovering ? 0.8 : 0.5) : .clear, radius: 3)
                 .frame(width: 22, height: 22)
-                .background(Circle().fill(Color.white.opacity(hovering && enabled ? 0.16 : 0.08)))
+                .background(Circle().fill(enabled ? color.opacity(hovering ? 0.22 : 0.12) : Color.white.opacity(0.06)))
+                .overlay(Circle().strokeBorder(color.opacity(enabled ? 0.25 : 0), lineWidth: 1))
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
