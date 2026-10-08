@@ -72,7 +72,7 @@ struct CountdownTimer: Identifiable, Codable, Equatable {
     var title: String {
         switch kind {
         case .normal: return label.isEmpty ? "Timer" : label
-        case .pomodoro: return "Tomate \(pomoIndex)" + (label.isEmpty ? "" : " – \(label)")
+        case .pomodoro: return "Tomate" + (label.isEmpty ? "" : " – \(label)")
         case .shortBreak: return "Pause"
         case .longBreak: return "Lange Pause"
         }

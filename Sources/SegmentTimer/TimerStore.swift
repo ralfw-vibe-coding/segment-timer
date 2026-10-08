@@ -197,6 +197,18 @@ final class TimerStore: ObservableObject {
         remove(t.id)
     }
 
+    /// Laufende Nummer der Tomate am heutigen Tag (fertige Tomaten heute + die laufende).
+    /// Unabhängig vom Satz bis zur langen Pause – es gibt keine Obergrenze.
+    func tomatoNumberToday(_ t: CountdownTimer) -> Int {
+        let done = PomodoroLog.stats(log.records(on: now)).tomatoes
+        return done + (t.kind == .pomodoro && t.state != .expired ? 1 : 0)
+    }
+
+    /// Wie viele Tomaten noch bis zur langen Pause – nach der Tomate mit Satzposition `t.pomoIndex`.
+    func tomatoesUntilLongBreak(after t: CountdownTimer) -> Int {
+        settings.longBreakEvery - t.pomoIndex
+    }
+
     /// Wird die lange Pause nach dieser Tomate fällig?
     func isLongBreakDue(after t: CountdownTimer) -> Bool {
         t.pomoIndex % settings.longBreakEvery == 0

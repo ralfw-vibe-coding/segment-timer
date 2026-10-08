@@ -111,9 +111,8 @@ struct DetailView: View {
     }
 
     private func headline(_ t: CountdownTimer) -> String {
-        let n = store.settings.longBreakEvery
         switch t.kind {
-        case .pomodoro: return "Tomate \(t.pomoIndex) von \(n)" + (t.label.isEmpty ? "" : " · \(t.label)")
+        case .pomodoro: return "Tomate \(store.tomatoNumberToday(t)) heute" + (t.label.isEmpty ? "" : " · \(t.label)")
         case .longBreak: return "Lange Pause"
         default: return "Pause"
         }

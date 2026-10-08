@@ -58,6 +58,7 @@ struct PomoDots: View {
     var size: CGFloat = 4
 
     var body: some View {
+        let position = index
         HStack(spacing: size * 0.7) {
             ForEach(0..<max(1, min(total, 12)), id: \.self) { i in
                 let done = i < index - 1 || (i == index - 1 && kind != .pomodoro)
@@ -68,6 +69,7 @@ struct PomoDots: View {
                     .frame(width: size, height: size)
             }
         }
+        .help("Tomate \(position) von \(total) bis zur langen Pause")
     }
 }
 
@@ -99,7 +101,7 @@ struct DayTimeline: View {
                         block(r)
                             .frame(width: max(2, x1 - x0), height: r.isWork ? height : height * 0.45)
                             .offset(x: x0, y: r.isWork ? 0 : height * 0.275)
-                            .help(Self.tooltip(r))
+                            .help(Self.tooltip(r, in: records))
                             .contextMenu {
                                 if let onDelete { Button("Eintrag löschen") { onDelete(r) } }
                             }
@@ -148,7 +150,7 @@ struct DayTimeline: View {
         return max(0, lo)...min(24, max(hi, lo + 1))
     }
 
-    static func tooltip(_ r: PomodoroRecord) -> String {
+    static func tooltip(_ r: PomodoroRecord, in dayRecords: [PomodoroRecord]) -> String {
         let f = DateFormatter()
         f.dateFormat = "HH:mm"
         let time = "\(f.string(from: r.start))–\(f.string(from: r.end))"
@@ -156,7 +158,9 @@ struct DayTimeline: View {
         let label = r.label.isEmpty ? "" : " · \(r.label)"
         switch r.kind {
         case .pomodoro:
-            return "Tomate \(r.index) · \(time) · \(dur)" + (r.completed ? "" : " (abgebrochen)") + label
+            // n-te Tomate dieses Tages
+            let number = dayRecords.filter { $0.isWork && $0.start <= r.start }.count
+            return "Tomate \(number) · \(time) · \(dur)" + (r.completed ? "" : " (abgebrochen)") + label
         case .longBreak:
             return "Lange Pause · \(time) · \(dur)"
         default:
@@ -231,7 +235,7 @@ struct PomodoroPromptView: View {
                 } else {
                     Image(systemName: "cup.and.saucer.fill").font(.system(size: 15, weight: .semibold))
                 }
-                Text(isWork ? "Tomate \(t.pomoIndex) geschafft" : (t.kind == .longBreak ? "Lange Pause vorbei" : "Pause vorbei"))
+                Text(isWork ? "Tomate \(store.tomatoNumberToday(t)) geschafft" : (t.kind == .longBreak ? "Lange Pause vorbei" : "Pause vorbei"))
                     .font(.system(size: 17, weight: .bold, design: .rounded))
             }
             .foregroundColor(color)
@@ -243,8 +247,13 @@ struct PomodoroPromptView: View {
                     .lineLimit(1)
             }
 
-            PomoDots(index: t.pomoIndex, total: settings.longBreakEvery, kind: isWork ? .shortBreak : t.kind,
-                     color: TimerPalette.tomato, size: 7)
+            VStack(spacing: 5) {
+                PomoDots(index: t.pomoIndex, total: settings.longBreakEvery, kind: isWork ? .shortBreak : t.kind,
+                         color: TimerPalette.tomato, size: 7)
+                Text(setInfo(t, long: long))
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundColor(TimerPalette.tomato.opacity(0.65))
+            }
 
             Text("Heute \(today.tomatoes) \(today.tomatoes == 1 ? "Tomate" : "Tomaten") · \(Format.minutes(today.focus))"
                  + (overdue >= 5 ? " · seit \(Format.compact(overdue))" : ""))
@@ -276,6 +285,16 @@ struct PomodoroPromptView: View {
                 .strokeBorder(color.opacity(blinkOn ? 0.6 : 0.25), lineWidth: 1.5)
         )
         .dragsWindow(window)
+    }
+}
+
+extension PomodoroPromptView {
+    /// Stand im Satz bis zur langen Pause.
+    fileprivate func setInfo(_ t: CountdownTimer, long: Bool) -> String {
+        if t.kind == .longBreak { return "Neuer Satz – weiter geht's" }
+        if long { return t.kind == .pomodoro ? "Zeit für die lange Pause" : "Lange Pause ausgelassen" }
+        let left = store.tomatoesUntilLongBreak(after: t)
+        return left == 1 ? "noch 1 Tomate bis zur langen Pause" : "noch \(left) Tomaten bis zur langen Pause"
     }
 }
 
