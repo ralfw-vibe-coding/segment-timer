@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Baut "Segment Timer.app" ohne Xcode-Projekt – nur mit Swift Package Manager.
 #   ./build.sh           → build/Segment Timer.app
-#   ./build.sh install   → zusätzlich nach ~/Applications kopieren und starten
+#   ./build.sh install   → zusätzlich nach /Applications kopieren und starten
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -60,10 +60,10 @@ codesign --force --deep --sign - "$APP" >/dev/null
 echo "✓ Fertig: $APP"
 
 if [[ "${1:-}" == "install" ]]; then
-  mkdir -p ~/Applications
   pkill -x SegmentTimer 2>/dev/null || true
-  rm -rf ~/Applications/"$APP_NAME.app"
-  cp -R "$APP" ~/Applications/
-  echo "✓ Installiert: ~/Applications/$APP_NAME.app"
-  open ~/Applications/"$APP_NAME.app"
+  sleep 0.5
+  rm -rf /Applications/"$APP_NAME.app"
+  cp -R "$APP" /Applications/
+  echo "✓ Installiert: /Applications/$APP_NAME.app"
+  open /Applications/"$APP_NAME.app"
 fi

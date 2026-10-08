@@ -10,7 +10,7 @@ Gebaut nur mit Swift Package Manager, ohne Xcode-Projekt.
 
 ```bash
 ./build.sh            # → build/Segment Timer.app
-./build.sh install    # → ~/Applications/Segment Timer.app und starten
+./build.sh install    # → /Applications/Segment Timer.app und starten
 ```
 
 ## Bedienung
