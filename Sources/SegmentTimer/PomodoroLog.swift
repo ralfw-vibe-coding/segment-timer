@@ -15,6 +15,13 @@ struct PomodoroRecord: Codable, Identifiable, Equatable {
     var end: Date { segments.last?.end ?? .distantPast }
     var activeDuration: TimeInterval { segments.reduce(0) { $0 + $1.duration } }
     var isWork: Bool { kind == .pomodoro }
+
+    /// Abgebrochene Tomaten zählen erst ab 5 Minuten – kürzere waren meist versehentlich gestartet.
+    static let minAbortedDuration: TimeInterval = 5 * 60
+
+    var counts: Bool {
+        !(isWork && !completed && activeDuration < Self.minAbortedDuration)
+    }
 }
 
 /// Verlauf aller Tomaten, gespeichert als JSON in Application Support.
@@ -36,6 +43,7 @@ final class PomodoroLog: ObservableObject {
     }
 
     func append(_ record: PomodoroRecord) {
+        guard record.counts else { return }
         records.append(record)
         save()
     }
@@ -69,7 +77,10 @@ final class PomodoroLog: ObservableObject {
         guard let fileURL, let data = try? Data(contentsOf: fileURL) else { return }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        records = (try? decoder.decode([PomodoroRecord].self, from: data)) ?? []
+        let loaded = (try? decoder.decode([PomodoroRecord].self, from: data)) ?? []
+        // Regel gilt auch für ältere Einträge
+        records = loaded.filter(\.counts)
+        if records.count != loaded.count { save() }
     }
 
     private func save() {
