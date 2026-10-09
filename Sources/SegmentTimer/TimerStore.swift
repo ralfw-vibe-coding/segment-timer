@@ -215,6 +215,13 @@ final class TimerStore: ObservableObject {
         settings.longBreakEvery - t.pomoIndex
     }
 
+    /// Deckel zu = wie manuelles Abbrechen: eine laufende Tomate zählt bis jetzt und beendet
+    /// die Runde, alle Timer werden gestoppt (auch klingelnde).
+    func stopAllForLidClose() {
+        if pomodoro != nil { endPomodoroRound() }
+        if !timers.isEmpty { timers.removeAll() }
+    }
+
     /// Wird die lange Pause nach dieser Tomate fällig?
     func isLongBreakDue(after t: CountdownTimer) -> Bool {
         t.pomoIndex % settings.longBreakEvery == 0

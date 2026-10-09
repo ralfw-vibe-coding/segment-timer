@@ -9,6 +9,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var panels: PanelController!
     private var statusItem: StatusItemController!
     private var hotKey: HotKey?
+    private var lidWatcher: LidWatcher?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         panels = PanelController(store: store, settings: settings, alarm: alarm)
@@ -16,6 +17,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = StatusItemController(store: store, settings: settings, panels: panels)
         hotKey = HotKey(keyCode: kVK_ANSI_T, modifiers: cmdKey | optionKey) { [weak self] in
             self?.panels.showInput()
+        }
+        lidWatcher = LidWatcher { [weak self] in
+            self?.store.stopAllForLidClose()
         }
     }
 

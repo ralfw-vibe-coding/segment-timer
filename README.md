@@ -24,6 +24,7 @@ Gebaut nur mit Swift Package Manager, ohne Xcode-Projekt.
 | Label ändern (auch Tomaten) | Klick auf den Titel in der Detailansicht oder Rechtsklick → „Label ändern …“; Enter speichert, Esc bricht ab |
 | Alarm stoppen | Enter oder Esc bzw. „Stopp“; außerdem +1 min, +5 min, Neustart |
 | Position, Ton, MP3, Lautstärke | Rechtsklick auf die Leiste → Einstellungen |
+| Deckel zuklappen | wirkt wie manuelles Abbrechen: alle Timer stoppen, eine laufende Tomate zählt bis dahin und beendet die Runde |
 
 ### Pomodoro
 
@@ -46,6 +47,12 @@ Zahlen ohne Einheit sind Minuten. Text vor oder nach der Zeit wird zum Label.
 | `12:30`, `14:45`, `um 9`, `18 Uhr`, `12.30` | Ablaufzeit (liegt sie in der Vergangenheit, dann morgen) |
 | `9 Tee`, `Meeting 14:45` | mit Label |
 | `pomo`, `pomo Kapitel 3` | Tomate starten |
+
+## Ruhezustand
+
+Die App hält den Mac nie wach. Ein klingelnder Alarm verstummt nach 2 Minuten (das Fenster bleibt stehen),
+weil laufender Ton den Ruhezustand sonst verhindern würde. Ohne Zuklappen laufen Timer nach Uhrzeit weiter
+und melden sich nach dem Aufwachen.
 
 ## Code
 

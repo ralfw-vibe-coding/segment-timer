@@ -6,6 +6,9 @@ final class AlarmPlayer: NSObject, AVAudioPlayerDelegate {
     private var player: AVAudioPlayer?
     private var shortPlayer: AVAudioPlayer?
     private(set) var isRinging = false
+    /// Solange Ton läuft, schläft der Mac nicht ein – darum klingelt der Alarm nicht endlos.
+    static let maxRingSeconds: TimeInterval = 120
+    private var ringGeneration = 0
 
     init(settings: AppSettings) {
         self.settings = settings
@@ -15,10 +18,18 @@ final class AlarmPlayer: NSObject, AVAudioPlayerDelegate {
         guard !isRinging else { return }
         isRinging = true
         play()
+        // Nach spätestens 2 Minuten verstummen (das Alarmfenster bleibt stehen)
+        ringGeneration += 1
+        let generation = ringGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.maxRingSeconds) { [weak self] in
+            guard let self, self.isRinging, self.ringGeneration == generation else { return }
+            self.stop()
+        }
     }
 
     func stop() {
         isRinging = false
+        ringGeneration += 1
         player?.stop()
         player = nil
     }
