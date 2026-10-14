@@ -33,7 +33,7 @@ Gebaut nur mit Swift Package Manager, ohne Xcode-Projekt.
 - In der Leiste: Siebensegment-„P“ vor dem Countdown, Punkte ●●◐○ zeigen die Position im Satz; in der Pause eine Tasse
 - Nach einer Tomate: Dialog mit Pause (jede 4. eine lange) · Nächste Tomate · Beenden; nach der Pause: Nächste Tomate · Beenden
 - Tomaten lassen sich anhalten und fortsetzen. Abbrechen zählt die bisherige Zeit und beendet die Runde (die nächste beginnt wieder bei 1). Abgebrochene Tomaten unter 5 min werden nicht protokolliert
-- Verlauf: Detailansicht der Tomate (heutiger Tag) und Fenster „Pomodoro-Verlauf“ (Rechtsklick auf die Leiste), eine Zeile pro Tag
+- Verlauf: Detailansicht der Tomate (heutiger Tag) und Fenster „Pomodoro-Verlauf“ (Rechtsklick auf die Leiste), eine Zeile pro Tag; darunter aufeinanderfolgende Tomaten mit gleichem Label gruppiert („7 × Projekt B“), Maus über eine Gruppe hebt ihre Blöcke hervor
 - Längen in den Einstellungen; Protokoll in `~/Library/Application Support/Segment Timer/pomodoro-log.json`
 
 ### Eingabe

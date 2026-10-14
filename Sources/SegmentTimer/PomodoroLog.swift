@@ -24,6 +24,34 @@ struct PomodoroRecord: Codable, Identifiable, Equatable {
     }
 }
 
+/// Aufeinanderfolgende Tomaten mit demselben Label (Pausen dazwischen unterbrechen nicht).
+struct PomodoroGroup: Identifiable {
+    var records: [PomodoroRecord]
+
+    var id: UUID { records[0].id }
+    var label: String { records[0].label }
+    var completed: Int { records.filter(\.completed).count }
+    var aborted: Int { records.count - completed }
+    var start: Date { records.first?.start ?? .distantPast }
+    var end: Date { records.last?.end ?? .distantPast }
+    var focus: TimeInterval { records.reduce(0) { $0 + $1.activeDuration } }
+    var ids: Set<UUID> { Set(records.map(\.id)) }
+
+    /// Tomaten eines Tages in Gruppen zerlegen – eine neue Gruppe beginnt, wenn sich das Label ändert.
+    static func groups(_ records: [PomodoroRecord]) -> [PomodoroGroup] {
+        func key(_ label: String) -> String { label.trimmingCharacters(in: .whitespaces).lowercased() }
+        var result: [PomodoroGroup] = []
+        for r in records.filter(\.isWork).sorted(by: { $0.start < $1.start }) {
+            if let last = result.last, key(last.label) == key(r.label) {
+                result[result.count - 1].records.append(r)
+            } else {
+                result.append(PomodoroGroup(records: [r]))
+            }
+        }
+        return result
+    }
+}
+
 /// Verlauf aller Tomaten, gespeichert als JSON in Application Support.
 final class PomodoroLog: ObservableObject {
     @Published private(set) var records: [PomodoroRecord] = []

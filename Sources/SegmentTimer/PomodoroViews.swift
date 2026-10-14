@@ -82,6 +82,8 @@ struct DayTimeline: View {
     var height: CGFloat = 14
     var nowMarker: Date? = nil
     var onDelete: ((PomodoroRecord) -> Void)? = nil
+    /// Nur diese Einträge kräftig zeigen (Maus über einer Gruppe), alle anderen abblenden
+    var highlight: Set<UUID>? = nil
 
     var body: some View {
         GeometryReader { geo in
@@ -99,6 +101,7 @@ struct DayTimeline: View {
                         let x0 = x(Self.hour(of: seg.start), w)
                         let x1 = x(Self.hour(of: seg.end), w)
                         block(r)
+                            .opacity(highlight.map { $0.contains(r.id) ? 1 : 0.25 } ?? 1)
                             .frame(width: max(2, x1 - x0), height: r.isWork ? height : height * 0.45)
                             .offset(x: x0, y: r.isWork ? 0 : height * 0.275)
                             .help(Self.tooltip(r, in: records))
@@ -376,29 +379,9 @@ struct HistoryDayRows: View {
 
     var body: some View {
         let cal = Calendar.current
-        LazyVStack(alignment: .leading, spacing: 9) {
+        LazyVStack(alignment: .leading, spacing: 16) {
             ForEach(days, id: \.self) { day in
-                let records = log.records(on: day)
-                let s = PomodoroLog.stats(records)
-                HStack(spacing: 10) {
-                    Text(dayTitle(day))
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundColor(.white.opacity(cal.isDateInToday(day) ? 0.9 : 0.6))
-                        .frame(width: 78, alignment: .leading)
-                    DayTimeline(records: records, hours: hours, height: 16,
-                                nowMarker: cal.isDateInToday(day) ? store.now : nil,
-                                onDelete: { log.remove($0.id) })
-                    HStack(spacing: 4) {
-                        TomatoIcon(size: 9)
-                        Text("\(s.tomatoes)" + (s.aborted > 0 ? " +\(s.aborted)" : ""))
-                        Text("· \(Format.minutes(s.focus))").foregroundColor(.white.opacity(0.45))
-                    }
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .monospacedDigit()
-                    .foregroundColor(.white.opacity(0.8))
-                    .frame(width: 96, alignment: .leading)
-                    .help(s.aborted > 0 ? "\(s.tomatoes) fertig, \(s.aborted) abgebrochen" : "\(s.tomatoes) Tomaten")
-                }
+                HistoryDayRow(day: day, title: dayTitle(day), isToday: cal.isDateInToday(day), hours: hours)
             }
         }
     }
@@ -411,5 +394,90 @@ struct HistoryDayRows: View {
         f.locale = Locale(identifier: "de_DE")
         f.dateFormat = "EE d. MMM"
         return f.string(from: day)
+    }
+}
+
+/// Ein Tag: Timeline, Tagesbilanz und darunter die Gruppen nach Label.
+struct HistoryDayRow: View {
+    let day: Date
+    let title: String
+    let isToday: Bool
+    let hours: ClosedRange<Double>
+    @EnvironmentObject var log: PomodoroLog
+    @EnvironmentObject var store: TimerStore
+    @State private var hovered: UUID?
+
+    var body: some View {
+        let records = log.records(on: day)
+        let s = PomodoroLog.stats(records)
+        let groups = PomodoroGroup.groups(records)
+        let highlight = groups.first { $0.id == hovered }?.ids
+
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 10) {
+                Text(title)
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundColor(.white.opacity(isToday ? 0.9 : 0.6))
+                    .frame(width: 78, alignment: .leading)
+                DayTimeline(records: records, hours: hours, height: 16,
+                            nowMarker: isToday ? store.now : nil,
+                            onDelete: { log.remove($0.id) },
+                            highlight: highlight)
+                HStack(spacing: 4) {
+                    TomatoIcon(size: 9)
+                    Text("\(s.tomatoes)" + (s.aborted > 0 ? " +\(s.aborted)" : ""))
+                    Text("· \(Format.minutes(s.focus))").foregroundColor(.white.opacity(0.45))
+                }
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .monospacedDigit()
+                .foregroundColor(.white.opacity(0.8))
+                .frame(width: 96, alignment: .leading)
+                .help(s.aborted > 0 ? "\(s.tomatoes) fertig, \(s.aborted) abgebrochen" : "\(s.tomatoes) Tomaten")
+            }
+
+            ForEach(groups) { g in
+                groupLine(g)
+                    .onHover { inside in
+                        if inside { hovered = g.id } else if hovered == g.id { hovered = nil }
+                    }
+            }
+            .padding(.leading, 88)
+            .padding(.trailing, 106)
+        }
+    }
+
+    private func groupLine(_ g: PomodoroGroup) -> some View {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        let active = hovered == g.id
+
+        return HStack(spacing: 8) {
+            Text("\(g.completed) ×")
+                .foregroundColor(TimerPalette.tomato.opacity(0.95))
+                .frame(width: 30, alignment: .trailing)
+            Text(g.label.isEmpty ? "ohne Label" : g.label)
+                .italic(g.label.isEmpty)
+                .foregroundColor(.white.opacity(g.label.isEmpty ? 0.4 : 0.85))
+                .lineLimit(1)
+                .truncationMode(.tail)
+            if g.aborted > 0 {
+                Text("+\(g.aborted) abgebrochen")
+                    .foregroundColor(TimerPalette.tomato.opacity(0.55))
+                    .fixedSize()
+            }
+            Spacer(minLength: 12)
+            Text("\(f.string(from: g.start))–\(f.string(from: g.end))")
+                .foregroundColor(.white.opacity(0.4))
+                .fixedSize()
+            Text(Format.minutes(g.focus))
+                .foregroundColor(.white.opacity(0.55))
+                .frame(width: 70, alignment: .trailing)
+        }
+        .font(.system(size: 11, weight: .medium, design: .rounded))
+        .monospacedDigit()
+        .padding(.vertical, 2)
+        .padding(.horizontal, 6)
+        .background(RoundedRectangle(cornerRadius: 4).fill(Color.white.opacity(active ? 0.07 : 0)))
+        .contentShape(Rectangle())
     }
 }

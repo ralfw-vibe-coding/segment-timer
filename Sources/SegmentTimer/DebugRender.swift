@@ -29,7 +29,8 @@ enum DebugRender {
         }
         func rec(_ kind: TimerKind, _ d: Int, _ h: Int, _ m: Int, _ minutes: Int, _ index: Int, done: Bool = true) -> PomodoroRecord {
             let s = at(d, h, m)
-            return PomodoroRecord(kind: kind, label: "Kapitel 3", index: index, planned: 1500,
+            let label = d == 0 && h >= 10 ? "Projekt A" : (d == 1 && h >= 15 ? "Steuer" : "Kapitel 3")
+            return PomodoroRecord(kind: kind, label: label, index: index, planned: 1500,
                                   segments: [TimeSegment(start: s, end: s.addingTimeInterval(TimeInterval(minutes * 60)))],
                                   completed: done)
         }
